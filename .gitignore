@@ -1,3 +1,11 @@
+# Hyurs-specific things
+data/*
+out/*
+credentials.json
+.DS_Store
+token.pickle
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
