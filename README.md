@@ -17,6 +17,12 @@ The main purpose of Hyurs is that once you've done this, you can generate for an
 
 In the future this will hopefully be extended to producing pretty graphs.
 
+## Dependencies
+
+* The Google libraries listed [here](https://developers.google.com/calendar/quickstart/python), specifically: `google-api-python-client google-auth-httplib2 google-auth-oauthlib`.
+* [Hy](https://docs.hylang.org/en/stable/) v0.20 or later.
+* Python v3.9 or later.
+
 
 ## Functional goal
 
