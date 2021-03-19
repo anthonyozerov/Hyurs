@@ -17,20 +17,24 @@ SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 if __name__ == '__main__':
     argp = argparse.ArgumentParser(description="Link wth Google Calendar and download events")
-    argp.add_argument('-c', '--calendars')
+    argp.add_argument('-c', '--calendars', nargs="*")
     argp.add_argument('-t', '--starttime', default="2021-01-01T00:00")
     argp.add_argument('-n', '--items', default=1024)
+    argp.add_argument('-i', '--ics',action='store_const',const=1,default=0)
 
     args = argp.parse_args()
 
-    calendar_names = args.calendars.split("%")
+    calendar_names = args.calendars
     start_time = dateparse(args.starttime)
     n = int(args.items)
 
     if len(calendar_names) == 0:
         print("WARNING: No calendars specified")
 
-    event_objs = download.events_from_calendars(calendar_names, start_time, n)
+    if args.ics:
+        event_objs=download.events_from_ics(calendar_names, start_time, n)
+    else:
+        event_objs = download.events_from_calendars(calendar_names, start_time, n)
     data.save_json("data/imported.json", event_objs)
 
     if not os.path.isfile("data/mapping.json"):

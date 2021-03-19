@@ -12,6 +12,31 @@ from dateutil.parser import parse as dateparse
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
+def events_from_ics(calendar_names, start_time, n):
+    import recurring_ical_events
+    import requests
+    from icalendar import Calendar, Event
+    
+    event_objs=[]
+
+    print(calendar_names)
+    for name in calendar_names:
+        r=requests.get(name)
+        cal=Calendar.from_ical(r.content)
+        calname=cal['X-WR-CALNAME']
+        print(f'Getting events for calendar with name {calname}...')
+        events=recurring_ical_events.of(cal).between(start_time,datetime.datetime.now())
+        for event in events:
+            start = event['DTSTART'].dt.isoformat()
+            end = event['DTEND'].dt.isoformat()
+            print(start, event['SUMMARY'])
+            event_objs.append({'start': start,
+                               'end': end,
+                               'summary': event['SUMMARY'],
+                               'calendar_name': calname,
+                               'fullname': calname + '/' + event['SUMMARY']})
+    return event_objs
+
 
 def events_from_calendars(calendar_names, start_time, n):
     # Much of this function is taken directly from Google Calendar quickstart documentation 
