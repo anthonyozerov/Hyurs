@@ -12,6 +12,9 @@
 (defn mappings [] (load-json mapping-path))
 (defn state    [] (load-json state-path))
 
+(defn mapping-names []
+  (list (.keys (mappings))))
+
 (defn mapping [mapping-name]
   (get-or (load-json mapping-path) mapping-name {}))
 

@@ -36,7 +36,7 @@
 
 (defn report-with-header
   [report-text t1-str t2-str]
-  (let [now (cut (str (datetime.datetime.now)) 0 19)]
+  (let [now (cut (str (datetime.datetime.now)) 0 19)] ; cut out time of day
     (data.file-write (str-join report-filename-prefix
                                now
                                ".txt")

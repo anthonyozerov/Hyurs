@@ -1,10 +1,26 @@
-(defn rst [l] (list (rest l)))
-
-(defn singleton? [l] (empty? (rst l)))
+(require [hy.contrib.walk [let]])
 
 (defn cons [el l] (+ [el] l))
+(defn snoc [l el] (+ l [el]))
 
+
+(defn rst [l] (list (rest l)))
+(defn singleton? [l] (empty? (rst l)))
+(defn butlastl [l] (cut l 0 (- (len l) 1)))
 (defn mapl [f l] (list (map f l)))
+(defn filterl [f l] (list (filter f l)))
+
+(defn partitionl
+  [f l]
+  (,
+   (filterl (fn [x] (not (f x)))
+            l)
+   (filterl f
+            l)))
+
+(defn list->str
+  [charlist]
+  (.join "" charlist))
 
 (defn fn-thread
   [&rest funcs]
@@ -51,6 +67,39 @@
   [l &optional [f identity]]
   (sorted l :key f))
 
+(defmacro setr
+  [var val]
+  `(do
+     (setv ~var ~val)
+     ~var))
+
+(defn get-ith
+  [i]
+  (fn [l] (get l i)))
+
+(defn prefixes
+  [l]
+  (if (singleton? l)
+    [l]
+    (snoc (prefixes (butlastl l))
+          l)))
+
+(defn slice-by-len
+  [lol &optional [f identity]] ; list of lists
+  (defn slicer
+    [remaining-lol i acc]
+    (if (empty? remaining-lol)
+      acc
+      (let [[not-next-len next-len]
+            (partitionl (fn [l]
+                          (= (len (f l)) i))
+                        remaining-lol)]
+      (slicer not-next-len
+              (+ i 1)
+              (snoc acc
+                    next-len)))))
+  (slicer lol 0 []))
+
 (defn error
   [&rest args]
   """Raises an exception that has the contents of args, space-separated,
@@ -61,3 +110,22 @@
        (.join " ")
        (Exception)
        (raise)))
+
+(defn hex->col
+  [hexstr]
+  ((fn [l] (mapl (fn [lst]
+                  (int (list->str lst)
+                       16))
+                (zip (take-nth 2 l)
+                     (take-nth 2 (rst l)))))
+   (rst hexstr)))
+
+(defn col->hex
+  [col-list]
+  (+ "#"
+     (list->str (mapl (fn [d]
+                        (let [hx (cut (hex d) 2)]
+                          (if (= (len hx) 2)
+                            hx
+                            (+ "0" hx))))
+                      col-list))))
