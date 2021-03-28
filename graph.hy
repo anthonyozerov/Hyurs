@@ -176,13 +176,41 @@
   (col->hex (map (fn [x] (random.randint 0 255))
                  ['three 'element 'list])))
 
+(defn col-from-real
+  [r]
+  """Maps 0-1 (or any other space between integers) to a bright colour.
+     The colour varies continuously with r.
+  """
+  (mapl (fn [x] (round (* 255
+                          x x)))
+        (mapl (fn [phase]
+                (math.cos (+ phase (* r tau 1/2))))
+              [0 (* tau 1/3) (* tau 2/3)])))
+
+(defn gen-col-fn
+  [seed]
+  (defn num-iter
+    [remaining-htag]
+    (let [hsh (hash (first remaining-htag))]
+      (if (empty? remaining-htag)
+        0
+        (+ (/ (* (% hsh seed)
+                 (if (< 0 hsh) -1 1))
+              seed)
+           (/ (num-iter (rst remaining-htag))
+              2))))) ; <- the bigger this number, the more htag colour is based on hierarchy
+  (fn [htag]
+    (col->hex (col-from-real (num-iter htag)))))
 
 (defn make-pie-chart
-  [tl farc-fn col-fn cx cy start-radius radius-step]
-  (nested-pie-chart farc-fn
-                    col-fn
-                    (treelist->tag-val-lists tl)
-                    cx
-                    cy
-                    start-radius
-                    radius-step))
+  [tl farc-fn col-fn cx cy graph-size]
+  (let [tag-val-lists (treelist->tag-val-lists tl)]
+    (nested-pie-chart farc-fn
+                      col-fn
+                      tag-val-lists
+                      cx
+                      cy
+                      0
+                      (/ graph-size
+                         2
+                         (max 1 (len tag-val-lists))))))

@@ -2,7 +2,7 @@
 from tkinter import *
 from tkinter import ttk
 from dateutil.relativedelta import relativedelta
-import math, datetime
+import math, datetime, random
 
 # Hyurs imports:
 import hy
@@ -35,6 +35,7 @@ def get_pie_slice_fn():
 draw_slice = get_pie_slice_fn()
 
 def graph(*args):
+    seed = random.random() * 100
     n = int(int_num.get())
     ts = data.dateparse_tz(start_ts.get())
     delta = None
@@ -57,11 +58,12 @@ def graph(*args):
                                                  str(ts),
                                                  str(ts + delta)),
                                draw_slice,
-                               grapher.rand_col_fn,
+                               grapher.gen_col_fn(seed),
                                x, graph_size / 2,
-                               0, 75)
+                               graph_size)
         x += graph_size
         ts += delta
+    canvas["scrollregion"] = (0, 0, x, canvas_height)
 
 # ------------------- #
 #    USER INTERFACE   #
@@ -178,14 +180,19 @@ button.grid(column=1,row=1)
 # CANVAS
 canvas_width = screen_width-24
 canvas_height = screen_height * 2/3
-canvas = Canvas(graphsframe, width=canvas_width, height=canvas_height, background=background_colour)
-#canvas.create_text(200, 100, text="Your graphs will appear here")
-#canvas.create_line(0, 0, 200, 200)
-#canvas.create_arc(10, 10, 200, 200, style="arc", fill='#dddd00', outline='black', width=1, start=45, extent=135)
-canvas.grid(column=0,row=0)
+hbar = ttk.Scrollbar(graphsframe, orient="horizontal")
+vbar = ttk.Scrollbar(graphsframe, orient="vertical")
+canvas = Canvas(graphsframe, width=canvas_width, height=canvas_height, background=background_colour,
+                scrollregion=(0,0,canvas_width,canvas_height),
+                yscrollcommand=vbar.set, xscrollcommand=hbar.set)
+hbar['command'] = canvas.xview
+vbar['command'] = canvas.yview
+canvas.grid(column=0, row=0, sticky=(N,W,E,S))
+hbar.grid(column=0, row=1, sticky=(W,E))
+vbar.grid(column=1, row=0, sticky=(N,S))
 
 def clear_canvas():
-    canvas.create_rectangle(0, 0, canvas_width, canvas_height, fill=background_colour)
+    canvas.delete("all")
 
 for child in mainframe.winfo_children():
     child.grid_configure(padx=5, pady=5)
