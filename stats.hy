@@ -219,6 +219,144 @@
          (tree-rank sum-tl key-prefix))
        (prefixes key)))
 
+(defn tag-matches
+  [template htag]
+  (cond
+    [(empty? template)
+     True]
+    [(empty? htag)
+     False]
+    [(= (first template)
+        (first htag))
+     (tag-matches (rst template)
+                  (rst htag))]
+    [True False]))
+
+(defn multi-tag-matcher
+  [templates]
+  (fn [htag]
+    (reduce or
+            (mapl (fn [template]
+                    (tag-matches template htag))
+                  templates))))
+
+(defn tags-match
+  [templates tag]
+  ((multi-tag-matcher templates) tag))
+
+(defn filter-tree
+  [f tree]
+  (make-node (node-key tree)
+             (node-val tree)
+             (filter-tl f
+                        (node-subs tree))))
+
+(defn filter-tl
+  [f tl]
+  (mapl (fn [tree]
+          (filter-tree f tree))
+        (filterl f tl)))
+
+(defn rest-starting-with
+  [start tags]
+  (mapl rst
+        (filterl (fn [tag]
+                   (= (first tag)
+                      start))
+                 tags)))
+
+(defn rule-in-tree
+  [tags tree]
+  (if (empty? tags)
+    tree
+    (if (in (node-key tree)
+            (mapl first tags))
+      (make-node (node-key tree)
+                 (node-val tree)
+                 (rule-in-tags (filterl (not-fn empty?)
+                                        (rest-starting-with (node-key tree)
+                                                            tags))
+                               (node-subs tree)))
+      'Leaf)))
+
+(defn rule-in-tags
+  [tags tl]
+  (filterl (not-fn leaf?)
+           (mapl (fn [tree]
+                   (rule-in-tree tags
+                                 tree))
+                 tl)))
+
+(defn rule-out-tree
+  [tags tree]
+  (if (empty? tags)
+    tree
+    (if (reduce or
+                (mapl (fn [tag]
+                        (and (singleton? tag)
+                             (= (first tag)
+                                (node-key tree))))
+                      tags))
+      'Leaf
+      (make-node (node-key tree)
+                 (node-val tree)
+                 (rule-out-tags (rest-starting-with (node-key tree)
+                                                    tags)
+                                (node-subs tree))))))
+
+(defn rule-out-tags
+  [tags tl]
+  (filterl (not-fn leaf?)
+           (mapl (fn [tree]
+                   (rule-out-tree tags
+                                  tree))
+                 tl)))
+
+(defn chop-from-root
+  [tl n]
+  (if (= n 0)
+    tl
+    (+l #*(mapl (fn [tree]
+                  (chop-from-root (node-subs tree)
+                                  (dec n)))
+                tl))))
+
+(defn trim-tree
+  [tl max-height &optional [n 0]]
+  (if (= max-height n)
+    []
+    (mapl (fn [tree]
+            (make-node (node-key tree)
+                       (node-val tree)
+                       (trim-tree (node-subs tree)
+                                  max-height
+                                  (inc n))))
+          tl)))
+
+(defn full-sumtree
+  [tl &optional [start-height 0] [end-height 999]]
+  """ This calculates a full sumtree, which is the original treelist tl except:
+      1. Node values are replaced with the sums of the subtree rooted at that
+         node.
+      2. If the combined value of the children of a node is less than the value
+         of the node, a new sibling node is inserted with Uncategorised
+         (a Lisp symbol) as its key and a value such that the sum of child
+         values is now the parent node's value.
+      3. The tree is extended so that all branches go to the same depth, by
+         again inserting nodes with the Uncategorised key (and value of their
+         parents) as necessary.
+      This is done to preserve the invariants:
+      1. Parent value = sum of child values
+      2. Sum of all values at depth i = sum of all values at depth i'
+  """
+  (-> tl
+      (sum-treelist)
+      (sum-tl-fill-uncategorised)
+      (treelist-extender
+       (tl-max-depth tl))
+      (trim-tree end-height)
+      (chop-from-root start-height)))
+
 (defn events-between [t1-str t2-str]
   (setv t1 (data.dateparse-tz t1-str))
   (setv t2 (data.dateparse-tz t2-str))
@@ -258,3 +396,22 @@
 (defn times->treelist
   [mapping-name t1-str t2-str]
   (events->treelist (select-events mapping-name t1-str t2-str)))
+
+(defn opts->treelist
+  [mapping-name t1-str t2-str
+   &optional [rule-in False] [special-tags ""]]
+  (let [tl (times->treelist mapping-name
+                            t1-str
+                            t2-str)]
+    (->> tl
+         ((if rule-in
+            rule-in-tags
+            rule-out-tags)
+          (data.tag_list_parse special-tags)))))
+
+
+(setv test-tl
+      (tl-multi-insert
+       []
+       [["a"] ["a" "b"] ["m"] ["a" "b" "c"] ["w"] ["m" "x"] ["a" "d"]]
+       [1 2 3 4 5 6 7]))

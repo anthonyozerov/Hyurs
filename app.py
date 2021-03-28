@@ -7,7 +7,7 @@ import math, datetime, random
 # Hyurs imports:
 import hy
 import graph as grapher
-from stats import hyx_times_XgreaterHthan_signXtreelist as times_to_treelist
+from stats import hyx_opts_XgreaterHthan_signXtreelist as opts_to_treelist
 import data
 
 
@@ -37,6 +37,13 @@ draw_slice = get_pie_slice_fn()
 def graph(*args):
     seed = random.random() * 100
     n = int(int_num.get())
+    filtered_tags = special_tags.get()
+    rule_in = False if include_btn.instate(["selected"]) else True
+    level_str = tag_levels.get()
+    start_level = 0
+    end_level = 999 # if your tagging system has more levels, get help
+    if level_str != "":
+        start_level, end_level = map(int, level_str.split("-"))
     ts = data.dateparse_tz(start_ts.get())
     delta = None
     interval_str = interval.get()
@@ -54,9 +61,13 @@ def graph(*args):
     x = graph_size / 2
     clear_canvas()
     while ts < end_ts:
-        grapher.make_pie_chart(times_to_treelist(mapping_name.get(),
-                                                 str(ts),
-                                                 str(ts + delta)),
+        grapher.make_pie_chart(opts_to_treelist(mapping_name.get(),
+                                                str(ts),
+                                                str(ts + delta),
+                                                rule_in,
+                                                filtered_tags),
+                               start_level,
+                               end_level,
                                draw_slice,
                                grapher.gen_col_fn(seed),
                                x, graph_size / 2,
@@ -167,6 +178,7 @@ special_tags_entry.grid(column=2,row=3,sticky=(W,E))
 only_special_tags = StringVar()
 exclude_btn = ttk.Radiobutton(frameright, text='rule in', variable=only_special_tags, value=False)
 include_btn = ttk.Radiobutton(frameright, text='rule out', variable=only_special_tags, value=True)
+only_special_tags.set(True)
 exclude_btn.grid(column=3,row=3)
 include_btn.grid(column=4,row=3)
 

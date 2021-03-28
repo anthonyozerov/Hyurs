@@ -100,6 +100,11 @@
                     next-len)))))
   (slicer lol 0 []))
 
+(defn not-fn
+  [f]
+  (fn [&rest args]
+    (not (f #*args))))
+
 (defn error
   [&rest args]
   """Raises an exception that has the contents of args, space-separated,
@@ -110,6 +115,11 @@
        (.join " ")
        (Exception)
        (raise)))
+
+(defn dbprint
+  [val &optional [comment "- debug print"]]
+  (print val comment)
+  val)
 
 (defn hex->col
   [hexstr]

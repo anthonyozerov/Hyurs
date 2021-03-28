@@ -65,6 +65,12 @@
   [htag]
   (.join ":" htag))
 
+(defn tag-list-parse
+  [s]
+  (mapl (fn [htag-str]
+          (.split htag-str ":"))
+        (.split s ", ")))
+
 (defn transform
   [json-path &rest funcs]
   (save-json json-path
