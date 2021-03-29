@@ -110,6 +110,12 @@
              #*(map tree-sum
                     (node-subs tree)))]))
 
+(defn tl-sum
+  [tl]
+  (reduce +
+          (mapl tree-sum
+                tl)))
+
 (defn sum-tree
   [tree]
   """Helper function for sum-treelist below."""

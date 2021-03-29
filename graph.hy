@@ -123,7 +123,7 @@
      (+ cx total-radius) (+ cy total-radius)]))
 
 (defn flame-chart
-  [rect-fn col-fn vals-by-len cx cy height layer-width]
+  [rect-fn col-fn vals-by-len cx cy dist/val layer-width]
   """ARGUMENTS:
   - rect-fn is a filled rectangle function, taking:
       x1 y1 x2 y2 color label-text
@@ -132,10 +132,50 @@
   - vals-by-len is a list of dictionaries from h-tag to value, where the ith
     element of the list is all h-tags of (i+1) elements
   - cx/cy are the coordinates of the corner of the graph
-  - height is the height of the graph (positive or negative to change direction)
+  - dist/val is the scale: distance units per value unit
   - layer-width is the width of one layer in the flame chart
   """
-  (error "Flame chart not implemented."))
+  (defn layer-iter
+    [vals-by-len x level]
+    (if (not (empty? vals-by-len))
+      (let [tags-vals (first vals-by-len)
+            htags (mapl first
+                        tags-vals)
+            vals (mapl last
+                       tags-vals)
+            cols (mapl col-fn
+                       htags)
+            labels (replace-uncategorised
+                    (mapl (get-ith level)
+                          htags))]
+        (setv y cy)
+        (for [i (list (range (len htags)))]
+          (setv yincr (* dist/val
+                         (get vals i)))
+          (rect-fn x
+                   y
+                   (+ x
+                      layer-width)
+                   (+ y yincr)
+                   (get cols i)
+                   (get labels i))
+          (setv y
+                (+ y yincr)))
+        (layer-iter (rst vals-by-len)
+                    (+ x layer-width)
+                    (inc level)))))
+  (layer-iter vals-by-len
+              cx
+              0)
+  [cx
+   cy
+   (+ cx
+      (* layer-width
+         (len vals-by-len)))
+   (+ cy
+      (reduce + ; this is the sum of values in the first level of the graph
+              (mapl last
+                    (first vals-by-len))))])
 
 (defn labelled-filled-arc-fn-gen
   [filled-arc-fn angled-text-fn background-col]
@@ -158,6 +198,64 @@
                               (+ ang (/ tau 4))))
                           label)))
       False)))
+
+(defn labelled-filled-rect-fn-gen
+  [filled-rect-fn angled-text-fn background-col]
+  (fn [x1 y1 x2 y2 col label]
+    (if label
+      (let [fill-col (if col col background-col)]
+        (filled-rect-fn x1 y1 x2 y2 fill-col)
+        (let [w (- x2 x1)
+              h (- y2 y1)
+              xm (/ (+ x1 x2) 2)
+              ym (/ (+ y1 y2) 2)]
+            (angled-text-fn xm
+                            ym
+                            (if (< w h)
+                              (/ tau 4)
+                              0)
+                            label)))
+      False)))
+
+(defn labelled-line-fn-gen
+  [line-fn angled-text-fn]
+  (fn [x y dx dy label]
+    (line-fn x y (+ x dx) (+ y dy))
+    (angled-text-fn (- x (* 10 (sign dx)))
+                    (- y (* 10 (sign dy)))
+                    0
+                    label)))
+
+(defn draw-scale
+  [labelled-line-fn sx sy dist/val maxval vertical?
+   &optional [tick-length 10]]
+  (defn scale-iter
+    [x y val incr]
+    (if (< val maxval)
+      (do
+        (labelled-line-fn x y
+                          (if vertical? 10 0)
+                          (if vertical? 0 10)
+                          val)
+        (if vertical?
+          (scale-iter x
+                      (+ y (* dist/val incr))
+                      (+ val incr)
+                      incr)
+          (scale-iter (+ x (* dist/val incr))
+                      y
+                      (+ val incr)
+                      incr)))))
+  (scale-iter sx sy 0
+              (round (/ maxval 10)))
+  (labelled-line-fn sx sy
+                    (if vertical?
+                      0
+                      (* dist/val maxval))
+                    (if vertical?
+                      (* dist/val maxval)
+                      0)
+                    ""))
 
 (defn rand-col-fn [htag]
   (col->hex (map (fn [x] (random.randint 0 255))
@@ -201,3 +299,14 @@
                       (/ graph-size
                          2
                          (max 1 (len tag-val-lists))))))
+
+(defn make-flame-chart
+  [tl start-level end-level rect-fn col-fn cx cy scale layer-width]
+  (let [tag-val-lists (treelist->tag-val-lists tl start-level end-level)]
+    (flame-chart rect-fn
+                 col-fn
+                 tag-val-lists
+                 cx
+                 cy
+                 scale
+                 layer-width)))

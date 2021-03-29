@@ -105,6 +105,12 @@
   (fn [&rest args]
     (not (f #*args))))
 
+(defn sign
+  [x]
+  (if (< x 0)
+    -1
+    1))
+
 (defn error
   [&rest args]
   """Raises an exception that has the contents of args, space-separated,

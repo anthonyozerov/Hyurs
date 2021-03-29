@@ -9,7 +9,7 @@ import hy
 import graph as grapher
 import report as reporter
 from stats import hyx_opts_XgreaterHthan_signXtreelist as opts_to_treelist
-import data
+import data, stats
 
 
 # DATA AND GRAPHING INTEGRATION:
@@ -26,14 +26,19 @@ def filled_arc_fn(cx, cy, r1, r2, ang1, ang2, colour):
                              start = deg(ang1), extent = angular_width,
                              fill=colour, outline="black", width=1)
 
+def filled_rect_fn(x1, y1, x2, y2, colour):
+    return canvas.create_rectangle(x1, y1, x2, y2, fill=colour)
+
+def line_fn(x1, y1, x2, y2):
+    return canvas.create_line(x1, y1, x2, y2)
+
 def angled_text_fn(x, y, angle, label):
     return canvas.create_text(x, y,
                               text = label, angle = deg(angle))
 
-def get_pie_slice_fn():
-    return grapher.labelled_filled_arc_fn_gen(filled_arc_fn, angled_text_fn, background_colour)
-
-draw_slice = get_pie_slice_fn()
+draw_slice = grapher.labelled_filled_arc_fn_gen(filled_arc_fn, angled_text_fn, background_colour)
+draw_rect = grapher.labelled_filled_rect_fn_gen(filled_rect_fn, angled_text_fn, background_colour)
+draw_line_lbl = grapher.labelled_line_fn_gen(line_fn, angled_text_fn)
 
 def decode_ui_input():
     n = int(int_num.get())
@@ -72,23 +77,54 @@ def decode_ui_input():
 def graph(*args):
     seed = random.random() * 100
     input = decode_ui_input()
-    x = graph_size / 2
+    x = 0
     clear_canvas()
     ts = input["start_ts"]
     delta = input["timedelta"]
+    ts2 = input["start_ts"]
+    max_val_sum = 0
+    while ts2 < input["end_ts"]: # find the scale so we can size the flame chart
+        treelist = opts_to_treelist(input["mapping"],
+                                    str(ts2),
+                                    str(ts2 + delta),
+                                    input["rule_in"],
+                                    input["special_tags"])
+        sum = stats.tl_sum(treelist)
+        if sum > max_val_sum:
+            max_val_sum = sum
+        ts2 += delta
     while ts < input["end_ts"]:
-        grapher.make_pie_chart(opts_to_treelist(input["mapping"],
-                                                str(ts),
-                                                str(ts + delta),
-                                                input["rule_in"],
-                                                input["special_tags"]),
-                               input["start_level"],
-                               input["end_level"],
-                               draw_slice,
-                               grapher.gen_col_fn(seed),
-                               x, graph_size / 2,
-                               graph_size)
-        angled_text_fn(x, graph_size + 50, 0,
+        if graph_type.get() == "Pie":
+            grapher.make_pie_chart(opts_to_treelist(input["mapping"],
+                                                    str(ts),
+                                                    str(ts + delta),
+                                                    input["rule_in"],
+                                                    input["special_tags"]),
+                                   input["start_level"],
+                                   input["end_level"],
+                                   draw_slice,
+                                   grapher.gen_col_fn(seed),
+                                   x + graph_size / 2, graph_size / 2,
+                                   graph_size)
+        else:
+            grapher.make_flame_chart(opts_to_treelist(input["mapping"],
+                                                    str(ts),
+                                                    str(ts + delta),
+                                                    input["rule_in"],
+                                                    input["special_tags"]),
+                                     input["start_level"],
+                                     input["end_level"],
+                                     draw_rect,
+                                     grapher.gen_col_fn(seed),
+                                     x + 30, 30,
+                                     graph_size / max_val_sum,
+                                     graph_size / 5)
+            grapher.draw_scale(draw_line_lbl,
+                               x + 20, 30,
+                               graph_size / max_val_sum,
+                               max_val_sum,
+                               True)
+        angled_text_fn(x + graph_size / 2, 10, 0,
                        str(ts.date()) + " - " + str((ts + delta).date()))
         x += graph_size
         ts += delta
