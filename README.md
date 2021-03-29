@@ -15,7 +15,11 @@ The main purpose of Hyurs is that once you've done this, you can generate for an
   * ...
 * ...
 
-In the future this will hopefully be extended to producing pretty graphs.
+Hyurs also has a UI for generating graphs:
+
+<img width="1440" alt="Example pie chart" src="https://user-images.githubusercontent.com/55555739/112853682-c7c52b00-90b5-11eb-9d4a-96dbb458af33.png">
+
+The graphs are very customisable: you can filter in or out based on a set of tags, choose what intervals to graph and how many, and so on.
 
 ## Dependencies
 
