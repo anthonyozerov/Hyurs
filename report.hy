@@ -34,12 +34,32 @@
                                      t1-str
                                      t2-str))))
 
+(defn write-multi-report
+  [mapping-name t1-strs t2-strs]
+  (if (empty? t1-strs)
+    ""
+    (str-join "\n\n"
+              "TIME PERIOD: " (cut (first t1-strs) 0 10)
+              " to " (cut (first t2-strs) 0 10)
+              "\n"
+              (write-report mapping-name
+                            (first t1-strs)
+                            (first t2-strs))
+              (write-multi-report mapping-name
+                                  (rst t1-strs)
+                                  (rst t2-strs)))))
+
 (defn report-with-header
-  [report-text t1-str t2-str]
+  [report-text t1-str t2-str &optional [filename ""]]
   (let [now (cut (str (datetime.datetime.now)) 0 19)] ; cut out time of day
-    (data.file-write (str-join report-filename-prefix
-                               now
+    (data.file-write (if (= 0 (len filename))
+                       (str-join report-filename-prefix
+                                 now
+                                 ".txt")
+                       (if (!= (cut filename -4)
                                ".txt")
+                         (str-join filename ".txt")
+                         filename))
                      (+ "HYURS REPORT\n"
                         "Generated: "  now "\n"
                         "Start time: " t1-str "\n"
@@ -48,9 +68,19 @@
                         (data.last-update-time) "\n\n"
                         report-text))))
 (defn save-report
-  [mapping-name t1-str t2-str]
+  [mapping-name t1-str t2-str &optional [filename ""]]
   (report-with-header (write-report mapping-name
                                     t1-str
                                     t2-str)
                       t1-str
-                      t2-str))
+                      t2-str
+                      filename))
+
+(defn save-multi-report
+  [mapping-name t1-strs t2-strs &optional [filename ""]]
+  (report-with-header (write-multi-report mapping-name
+                                          t1-strs
+                                          t2-strs)
+                      (first t1-strs)
+                      (last t2-strs)
+                      filename))

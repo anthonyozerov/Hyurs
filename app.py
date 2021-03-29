@@ -7,6 +7,7 @@ import math, datetime, random
 # Hyurs imports:
 import hy
 import graph as grapher
+import report as reporter
 from stats import hyx_opts_XgreaterHthan_signXtreelist as opts_to_treelist
 import data
 
@@ -34,8 +35,7 @@ def get_pie_slice_fn():
 
 draw_slice = get_pie_slice_fn()
 
-def graph(*args):
-    seed = random.random() * 100
+def decode_ui_input():
     n = int(int_num.get())
     filtered_tags = special_tags.get()
     rule_in = False if include_btn.instate(["selected"]) else True
@@ -58,23 +58,53 @@ def graph(*args):
         print("Can't understand your time interval: " + interval_str)
         return
     end_ts = ts + delta * n
+    return {"mapping": mapping_name.get(),
+            "intervals": n,
+            "special_tags": filtered_tags,
+            "rule_in": rule_in,
+            "start_level": start_level,
+            "end_level": end_level,
+            "start_ts": ts,
+            "end_ts": end_ts,
+            "timedelta": delta,
+            "filepath": save_path.get()}
+
+def graph(*args):
+    seed = random.random() * 100
+    input = decode_ui_input()
     x = graph_size / 2
     clear_canvas()
-    while ts < end_ts:
-        grapher.make_pie_chart(opts_to_treelist(mapping_name.get(),
+    ts = input["start_ts"]
+    delta = input["timedelta"]
+    while ts < input["end_ts"]:
+        grapher.make_pie_chart(opts_to_treelist(input["mapping"],
                                                 str(ts),
                                                 str(ts + delta),
-                                                rule_in,
-                                                filtered_tags),
-                               start_level,
-                               end_level,
+                                                input["rule_in"],
+                                                input["special_tags"]),
+                               input["start_level"],
+                               input["end_level"],
                                draw_slice,
                                grapher.gen_col_fn(seed),
                                x, graph_size / 2,
                                graph_size)
+        angled_text_fn(x, graph_size + 50, 0,
+                       str(ts.date()) + " - " + str((ts + delta).date()))
         x += graph_size
         ts += delta
     canvas["scrollregion"] = (0, 0, x, canvas_height)
+
+def report(*args):
+    input = decode_ui_input()
+    start_ts = input["start_ts"]
+    delta = input["timedelta"]
+    start_times = [start_ts + i * delta for i in range(input["intervals"])]
+    end_times = [ts + delta for ts in start_times]
+    reporter.save_multi_report(input["mapping"],
+                               list(map(str, start_times)),
+                               list(map(str, end_times)),
+                               input["filepath"])
+
 
 # ------------------- #
 #    USER INTERFACE   #
@@ -150,6 +180,14 @@ int_num_entry = ttk.Entry(frameleft, width=input_width, textvariable=int_num)
 int_num_entry.grid(column=2, row=3, sticky=(W, E))
 int_num_entry.insert(0, "3")
 ttk.Label(frameleft, text="Number of intervals:").grid(column=1, row=3, sticky=W)
+
+save_path = StringVar()
+save_path_entry = ttk.Entry(frameleft, width=input_width, textvariable=save_path)
+save_path_entry.grid(column=2, row=4, sticky=(W,E))
+save_path_entry.insert(0, "out/report-" + str(datetime.datetime.now()))
+ttk.Label(frameleft, text="Report path:").grid(column=1, row=4, sticky=W)
+reportbtn = ttk.Button(frameleft, text='Generate report', command=report)
+reportbtn.grid(column=2,row=5)
 
 
 # RIGHT FRAME
