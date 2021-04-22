@@ -37,6 +37,12 @@ if __name__ == '__main__':
         event_objs = download.events_from_calendars(calendar_names, start_time, n)
     data.save_json("data/imported.json", event_objs)
 
+    if not os.path.exists('out'):
+        os.makedirs('out')
+
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
     if not os.path.isfile("data/mapping.json"):
         data.save_json("data/mapping.json", {})
 
